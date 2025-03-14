@@ -1,0 +1,28 @@
+#!/bin/zsh -f
+
+## Massaging means processing annotations.
+## Annotations are meant to *modify* a file and are lines beginning with: #@
+typeset -r FILE_TO_MASSAGE="${1}"
+typeset -r MASSAGED_FILE="${2}"
+
+if [[ -f "${MASSAGED_FILE}" ]]; then
+  rm "${MASSAGED_FILE}"
+fi
+
+while IFS='\n' read -r line; do
+  if [[ "${line[1,2]}" = '#@' ]]; then
+    typeset -a annotation=(${(s: :)${line[3,-1]}})
+    if [[ "${annotation[1]}" = 'shebang' ]]; then
+      # Replaced with a Zsh shebang.
+      echo '#!/bin/zsh -f' >> "${MASSAGED_FILE}"
+    elif [[ "${annotation[1]}" = 'expand' ]]; then
+      # Replace with the contents of the file.
+      cat "${annotation[2]}" >> "${MASSAGED_FILE}"
+    elif [[ "${annotation[1]}" = 'executable' ]]; then
+      # Make file executable.
+      chmod a+x "${MASSAGED_FILE}"
+    fi
+  else
+    echo "${line}" >> "${MASSAGED_FILE}"
+  fi
+done <<< "$(cat "${FILE_TO_MASSAGE}")"
