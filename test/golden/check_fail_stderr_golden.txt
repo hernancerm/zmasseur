@@ -1,0 +1,2 @@
+Error test/src/main_with_errors.zsh:2 Unrecognized annotation: executabl
+Error test/src/main_with_errors.zsh:4 Unreadable file: ./test/src/lib.c

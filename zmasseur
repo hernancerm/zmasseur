@@ -1,5 +1,39 @@
 #!/bin/zsh -f
 
+# Do we just want to check the annotations?
+if [[ "${1}" = '--check' ]]; then
+  typeset -a errors=()
+  typeset -r FILE_TO_CHECK="${2}"
+  typeset -i line_nr=1
+  typeset -a recognized_annotations=(
+    shebang expand executable
+  )
+  # Collect errors.
+  while IFS='\n' read -r line; do
+    if [[ "${line[1,2]}" = '#@' ]]; then
+      typeset -a annotation=(${(s: :)${line[3,-1]}})
+      if [[ ${recognized_annotations[(i)${annotation[1]}]} -gt ${#recognized_annotations} ]]; then
+        errors+=("Error ${FILE_TO_CHECK}:${line_nr} Unrecognized annotation: ${annotation[1]}")
+      fi
+      if [[ "${annotation[1]}" = 'expand' ]] && ! [[ -f "${annotation[2]}" ]]; then
+        errors+=("Error ${FILE_TO_CHECK}:${line_nr} Unreadable file: ${annotation[2]}")
+      fi
+    fi
+    line_nr=$((line_nr + 1))
+  done <<< "$(cat "${2}")"
+  # Exit, printing all errors if any.
+  if [[ ${#errors} -eq 0 ]]; then
+    exit 0
+  else
+    for error in ${errors}; do
+      echo "${error}" >&2
+    done
+    exit ${#errors}
+  fi
+fi
+
+# If we got here then we do want to massage.
+
 ## Massaging means processing annotations.
 ## Annotations are meant to *modify* a file and are lines beginning with: #@
 typeset -r FILE_TO_MASSAGE="${1}"
@@ -14,15 +48,18 @@ while IFS='\n' read -r line; do
     typeset -a annotation=(${(s: :)${line[3,-1]}})
     if [[ "${annotation[1]}" = 'shebang' ]]; then
       # Replaced with a Zsh shebang.
-      echo '#!/bin/zsh -f' >> "${MASSAGED_FILE}"
+      echo '#!/bin/zsh -f' >> "${MASSAGED_FILE:-/dev/stdout}"
     elif [[ "${annotation[1]}" = 'expand' ]]; then
       # Replace with the contents of the file.
-      cat "${annotation[2]}" >> "${MASSAGED_FILE}"
+      cat "${annotation[2]}" >> "${MASSAGED_FILE:-/dev/stdout}"
     elif [[ "${annotation[1]}" = 'executable' ]]; then
-      # Make file executable.
-      chmod a+x "${MASSAGED_FILE}"
+      if [[ -n "${MASSAGED_FILE}" ]]; then
+        # Make file executable.
+        touch "${MASSAGED_FILE}"
+        chmod a+x "${MASSAGED_FILE}"
+      fi
     fi
   else
-    echo "${line}" >> "${MASSAGED_FILE}"
+    echo "${line}" >> "${MASSAGED_FILE:-/dev/stdout}"
   fi
 done <<< "$(cat "${FILE_TO_MASSAGE}")"

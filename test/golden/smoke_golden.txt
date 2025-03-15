@@ -1,0 +1,7 @@
+#!/bin/zsh -f
+
+function smile {
+  echo 'c:'
+}
+
+smile

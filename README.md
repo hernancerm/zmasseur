@@ -14,14 +14,14 @@ The file to be massaged is "main.zsh":
 #@shebang
 #@executable
 
-#@expand ./functions.zsh
+#@expand ./lib.zsh
 
 smile
 ````
 
 The file "main.zsh" uses the function from this file:
 
-`functions.zsh`
+`lib.zsh`
 
 ```sh
 function smile {
